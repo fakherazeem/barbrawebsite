@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   ArrowRight,
@@ -10,19 +10,17 @@ import {
   ShieldCheck,
   Users,
   CheckCircle2,
-  Menu,
-  X,
   ChevronDown,
-  MessageCircle,
-  LockKeyhole,
   Home,
   Car,
   BriefcaseBusiness,
-  Wallet,
-  Calculator,
   Phone,
 } from "lucide-react";
 import "./styles.css";
+import ContactPage from "./ContactPage.jsx";
+import LoanCalculatorPage from "./LoanCalculatorPage.jsx";
+import SiteFooter from "./SiteFooter.jsx";
+import SiteHeader from "./SiteHeader.jsx";
 
 const services = [
   {
@@ -65,30 +63,131 @@ const services = [
 
 const financingServices = [
   {
+    icon: BookOpen,
+    title: "Student Loans",
+    description: "Explore student loan options as you plan for tuition, training, and future goals.",
+    image: "photo-1579621970563-ebec7560ff3e",
+  },
+  {
     icon: Home,
-    title: "Home Financing",
-    description: "Explore financing options and understand possible paths toward your homeownership goals.",
+    title: "Home Loans",
+    description: "Explore possible home financing paths as you work toward homeownership.",
     image: "photo-1560518883-ce09059eeffa",
   },
   {
     icon: Car,
-    title: "Auto Financing",
-    description: "Understand available auto financing options and prepare for your next vehicle purchase.",
+    title: "Auto Loans",
+    description: "Learn about auto financing options and prepare for your next vehicle purchase.",
     image: "photo-1492144534655-ae79c964c9d7",
   },
   {
     icon: BriefcaseBusiness,
-    title: "Business Financing",
+    title: "Business Loans",
     description: "Explore financing possibilities that may support your business plans and goals.",
     image: "photo-1497366754035-f200968a6e72",
   },
+];
+
+const commonSituations = [
   {
-    icon: Wallet,
-    title: "Personal Financing",
-    description: "Learn about personal financing options based on your needs and financial situation.",
-    image: "photo-1579621970563-ebec7560ff3e",
+    title: "I was denied and I don't know why.",
+    accent: "#76d5f8",
+    behind: [
+      "A credit score is only one part of a lending decision.",
+      "Income, existing debts, savings, and lender-specific criteria may also matter.",
+      "The lender's notice may explain the main reasons for its decision.",
+    ],
+    help: [
+      "Review your credit reports and understand the reasons listed in the lender's notice.",
+      "Prepare questions about possible next steps without assuming another lender will decide the same way.",
+    ],
+  },
+  {
+    title: "I paid for credit repair and nothing changed.",
+    accent: "#ffd43b",
+    behind: [
+      "Accurate information generally cannot be removed simply because it is unfavorable.",
+      "Disputes should focus on information you believe is inaccurate or incomplete.",
+      "Credit outcomes depend on multiple factors and no particular result or timeline can be promised.",
+    ],
+    help: [
+      "Understand what your reports say and which details may need closer review.",
+      "Learn how disputes, service fees, and contract terms work before deciding what to do next.",
+    ],
+  },
+  {
+    title: "I want to buy a home, but I don't know if I qualify.",
+    accent: "#28d9a0",
+    behind: [
+      "Mortgage decisions can consider credit, income, debts, savings, and the property.",
+      "Requirements differ among lenders and loan programs.",
+      "A credit score by itself cannot confirm whether an application will be approved.",
+    ],
+    help: [
+      "Review your credit information and learn about factors a lender may ask you about.",
+      "Prepare questions so you can compare loan terms and discuss your situation with a lender.",
+    ],
+  },
+  {
+    title: "I have little or no credit history.",
+    accent: "#ff947d",
+    behind: [
+      "A shorter or limited history gives scoring models less account information to evaluate.",
+      "Opening new accounts can involve fees, inquiries, and repayment obligations.",
+      "There is no single account or product that is right for everyone.",
+    ],
+    help: [
+      "Learn how payment history, balances, account age, and other factors are generally considered.",
+      "Explore education-first next steps and avoid borrowing only to try to change a score.",
+    ],
   },
 ];
+
+const creditFactors = [
+  {
+    name: "Payment history",
+    percentage: 35,
+    color: "#12636b",
+    mutedColor: "#b9d1d2",
+    description: "Payment history is a major general scoring factor. Check reports for accuracy and keep track of due dates.",
+  },
+  {
+    name: "Amounts owed",
+    percentage: 30,
+    color: "#2bd7a3",
+    mutedColor: "#c5f3e5",
+    description: "Balances compared with available revolving credit are often called utilization. A lower ratio is generally preferable.",
+  },
+  {
+    name: "Length of history",
+    percentage: 15,
+    color: "#69c8f2",
+    mutedColor: "#d5effa",
+    description: "The age of accounts and how long they have been used can contribute to a score.",
+  },
+  {
+    name: "New credit",
+    percentage: 10,
+    color: "#ffc938",
+    mutedColor: "#fff0bc",
+    description: "Recent applications and new accounts may be considered. Apply only when an account fits your needs.",
+  },
+  {
+    name: "Credit mix",
+    percentage: 10,
+    color: "#ff9277",
+    mutedColor: "#ffe0d8",
+    description: "Different account types may be considered, but there is no need to borrow just to add another type.",
+  },
+];
+
+function formatDollars(value) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
 
 const faqs = [
   {
@@ -119,16 +218,15 @@ const faqs = [
 ];
 
 function App() {
-  const [menuOpen, setMenuOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState(0);
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
-  const [loanAmount, setLoanAmount] = useState("");
-  const [downPayment, setDownPayment] = useState("0");
-  const [loanApr, setLoanApr] = useState("");
-  const [loanTerm, setLoanTerm] = useState("");
-  const [financedFees, setFinancedFees] = useState("0");
-  const [loanError, setLoanError] = useState("");
-  const [loanEstimate, setLoanEstimate] = useState(null);
+  const [activeSituation, setActiveSituation] = useState(1);
+  const [activeCreditFactor, setActiveCreditFactor] = useState(4);
+  const [cardBalance, setCardBalance] = useState(2200);
+  const [creditLimit, setCreditLimit] = useState(3000);
+  const creditServicesSectionRef = useRef(null);
+  const creditServicesViewportRef = useRef(null);
+  const creditServicesTrackRef = useRef(null);
 
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -142,86 +240,71 @@ function App() {
     return () => window.clearInterval(intervalId);
   }, []);
 
-  function updateLoanInput(setValue, event) {
-    setValue(event.target.value);
-    setLoanEstimate(null);
-    setLoanError("");
-  }
-
-  function handleLoanSubmit(event) {
-    event.preventDefault();
-
-    const amount = Number(loanAmount);
-    const down = Number(downPayment);
-    const apr = Number(loanApr);
-    const months = Number(loanTerm);
-    const fees = Number(financedFees);
-
-    if (down > amount) {
-      setLoanError("Down payment cannot be greater than the purchase price or loan amount.");
-      setLoanEstimate(null);
-      return;
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return undefined;
     }
 
-    const principal = amount - down + fees;
-    if (principal <= 0) {
-      setLoanError("Enter an amount that leaves a balance to finance.");
-      setLoanEstimate(null);
-      return;
-    }
+    const section = creditServicesSectionRef.current;
+    const viewport = creditServicesViewportRef.current;
+    const track = creditServicesTrackRef.current;
+    if (!section || !viewport || !track) return undefined;
 
-    const monthlyRate = apr / 100 / 12;
-    const monthlyPayment = monthlyRate === 0
-      ? principal / months
-      : principal * monthlyRate / (1 - (1 + monthlyRate) ** -months);
-    const totalPayments = monthlyPayment * months;
+    let frameId = 0;
+    const updateTrack = () => {
+      const visibleCards = window.matchMedia("(max-width: 700px)").matches ? 1 : 3;
+      const gap = Number.parseFloat(window.getComputedStyle(track).columnGap) || 0;
+      const cardWidth = (viewport.clientWidth - gap * (visibleCards - 1)) / visibleCards;
+      track.style.setProperty("--credit-card-width", `${cardWidth}px`);
 
-    setLoanError("");
-    setLoanEstimate({
-      amountFinanced: principal,
-      monthlyPayment,
-      totalPayments,
-      totalInterest: totalPayments - principal,
-    });
-  }
+      const scrollDistance = Math.max(0, track.scrollWidth - viewport.clientWidth);
+      section.style.setProperty("--credit-scroll-distance", `${scrollDistance}px`);
+
+      const progress = scrollDistance === 0
+        ? 0
+        : Math.min(1, Math.max(0, -section.getBoundingClientRect().top / scrollDistance));
+      track.style.transform = `translate3d(${-scrollDistance * progress}px, 0, 0)`;
+    };
+    const scheduleUpdate = () => {
+      window.cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(updateTrack);
+    };
+
+    window.addEventListener("scroll", scheduleUpdate, { passive: true });
+    window.addEventListener("resize", scheduleUpdate);
+    scheduleUpdate();
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.removeEventListener("scroll", scheduleUpdate);
+      window.removeEventListener("resize", scheduleUpdate);
+    };
+  }, []);
+
+  const situation = commonSituations[activeSituation];
+  const creditFactor = creditFactors[activeCreditFactor];
+  const utilizationPercentage = Math.round((cardBalance / creditLimit) * 100);
+  const utilizationStatus = utilizationPercentage < 10
+    ? { label: "Low", className: "low" }
+    : utilizationPercentage < 30
+      ? { label: "Moderate", className: "moderate" }
+      : utilizationPercentage < 50
+        ? { label: "Elevated", className: "elevated" }
+        : { label: "High", className: "high" };
+  let factorStart = 0;
+  const factorGradientStops = creditFactors.map((factor, index) => {
+    const factorEnd = factorStart + factor.percentage;
+    const factorColor = index === activeCreditFactor ? factor.color : factor.mutedColor;
+    const stop = `${factorColor} ${factorStart}% ${factorEnd}%`;
+    factorStart = factorEnd;
+    return stop;
+  });
+  const factorGradient = `conic-gradient(from -90deg, ${factorGradientStops.join(", ")})`;
 
   return (
-    <main>
-      <header className="site-header">
-        <a className="brand" href="#">
-          <span className="brand-mark">B</span>
-          <span className="brand-name">
-            <strong>Barbra's</strong>
-            <small>HOUSE OF CREDIT</small>
-          </span>
-        </a>
-
-        <button
-          className="menu-toggle"
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label={menuOpen ? "Close navigation" : "Open navigation"}
-          aria-expanded={menuOpen}
-          aria-controls="primary-navigation"
-        >
-          {menuOpen ? <X /> : <Menu />}
-        </button>
-
-        <nav
-          className={menuOpen ? "main-nav open" : "main-nav"}
-          id="primary-navigation"
-        >
-          <a href="#home" onClick={() => setMenuOpen(false)}>Home</a>
-          <a href="#services" onClick={() => setMenuOpen(false)}>Our Services</a>
-          <a href="#credit" onClick={() => setMenuOpen(false)}>Credit Improvement</a>
-          <a href="#about" onClick={() => setMenuOpen(false)}>About</a>
-          <a href="#calculator" onClick={() => setMenuOpen(false)}>Calculator</a>
-          <a className="nav-cta" href="#contact" onClick={() => setMenuOpen(false)}>
-            Let's Talk <ArrowRight size={16} />
-          </a>
-        </nav>
-      </header>
-
-   
+    <div className="home-page">
+      <SiteHeader activePage="credit" />
+      <main>
 <section className="hero" id="home">
   {financingServices.map((service, index) => (
     <div
@@ -252,9 +335,8 @@ function App() {
     </h2>
 
     <p>
-      From education and auto loans to home and business financing,
-      we're here to help you explore your options and move forward
-      with confidence.
+      Student loans. Home loans. Auto loans. Business loans. Find the financing
+      path that fits your next goal.
     </p>
 
     <p className="hero-promise">
@@ -262,19 +344,11 @@ function App() {
     </p>
 
     <div className="hero-actions">
-      <a href="#services" className="button button-light">
-        Explore Your Options <ArrowRight size={18} />
-      </a>
-
-      <a href="#calculator" className="button button-outline-light">
-        Loan Calculator <Calculator size={17} />
-      </a>
-
-      <a href="tel:+1XXXXXXXXXX" className="hero-call">
+      <a href="tel:+15125550143" className="hero-call">
         <Phone size={18} aria-hidden="true" />
         <span>
-          <small>Call us</small>
-          <strong>+1 (XXX) XXX-XXXX</strong>
+          <small>Call Now (demo)</small>
+          <strong>+1 (512) 555-0143</strong>
         </span>
       </a>
     </div>
@@ -302,177 +376,182 @@ function App() {
 </section>
 
 
-      <section className="intro-section container">
-        <div>
-          <span className="eyebrow">FINANCIAL GUIDANCE THAT STARTS WITH YOU</span>
-          <h2>Every financial goal starts with understanding your options.</h2>
-        </div>
-        <p>
-          Whether you're exploring financing or looking to better understand
-          your credit, we're here to help you learn about your options and
-          consider your next steps with greater confidence.
-        </p>
-      </section>
-
-      <section className="financing-section" id="services">
+      <section className="common-situations-section" id="common-situations">
         <div className="container">
-          <div className="section-heading">
-            <span className="eyebrow">EXPLORE YOUR OPTIONS</span>
-            <h2>What are you working toward?</h2>
-            <p>
-              Start with the goal that matters to you. Learn more about the
-              guidance and options available.
-            </p>
+          <div className="common-situations-heading">
+            <span className="eyebrow">COMMON SITUATIONS</span>
+            <h2>Common credit challenges and what may be behind them.</h2>
+            <p>Select the situation closest to yours to explore how we can help.</p>
           </div>
 
-          <div className="financing-grid">
-            {financingServices.map((service, index) => {
-              const Icon = service.icon;
-              return (
-                <article className="financing-card" key={service.title}>
-                  <div className="financing-image">
-                    <img
-                      src={`https://images.unsplash.com/${service.image}?auto=format&fit=crop&w=850&q=85`}
-                      alt={service.title}
-                    />
-                    <span className="card-number">0{index + 1}</span>
-                  </div>
-                  <div className="financing-card-body">
-                    <div className="card-icon"><Icon size={22} /></div>
-                    <h3>{service.title}</h3>
-                    <p>{service.description}</p>
-                    <a href="#contact">
-                      Discuss Your Goals <ArrowRight size={16} />
-                    </a>
-                  </div>
-                </article>
-              );
-            })}
+          <div className="common-situations-grid">
+            <div className="common-situation-list" role="group" aria-label="Select a common situation">
+              {commonSituations.map((item, index) => (
+                <button
+                  aria-pressed={activeSituation === index}
+                  className={activeSituation === index ? "common-situation-option active" : "common-situation-option"}
+                  key={item.title}
+                  onClick={() => setActiveSituation(index)}
+                  type="button"
+                >
+                  <span className="situation-number" style={{ backgroundColor: item.accent }}>
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                  <span className="situation-option-title">{item.title}</span>
+                  <ArrowRight size={17} aria-hidden="true" />
+                </button>
+              ))}
+            </div>
+
+            <article className="common-situation-detail" aria-live="polite">
+              <header className="common-situation-detail-heading" style={{ backgroundColor: situation.accent }}>
+                <span>Situation {activeSituation + 1} of {commonSituations.length}</span>
+                <h3>"{situation.title}"</h3>
+              </header>
+              <div className="common-situation-detail-content">
+                <div>
+                  <h4>What's usually behind it</h4>
+                  <ul className="situation-explanation-list">
+                    {situation.behind.map((detail) => (
+                      <li key={detail}>{detail}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="situation-help">
+                  <h4>How we can help</h4>
+                  <ul>
+                    {situation.help.map((step) => (
+                      <li key={step}>
+                        <CheckCircle2 size={17} aria-hidden="true" />
+                        <span>{step}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <a className="button button-dark" href="#contact">
+                    Talk through your next step <ArrowRight size={16} />
+                  </a>
+                </div>
+                <p className="situation-disclaimer">
+                  Every situation is different. We provide education and guidance, not a promise of credit-score changes or loan approval.
+                </p>
+              </div>
+            </article>
           </div>
         </div>
       </section>
 
-      <section className="calculator-section" id="calculator">
-        <div className="container calculator-grid">
-          <div className="calculator-copy">
-            <span className="eyebrow">PLAN WITH AN ESTIMATE</span>
-            <h2>Explore what a loan payment could look like.</h2>
+      <section className="credit-insights-section" id="credit-insights">
+        <div className="container">
+          <div className="credit-insights-heading">
+            <span className="eyebrow">YOUR CREDIT, EXPLAINED</span>
+            <h2>Explore the factors behind a credit score.</h2>
             <p>
-              Estimate fixed monthly payments for a home, auto, business, or
-              personal loan using the APR and term from a lender quote.
+              Select a factor to learn more, or adjust the sliders to see how a card balance compares with its limit.
             </p>
-            <div className="calculator-note">
-              <ShieldCheck size={21} />
-              <p>
-                Credit history and other lender criteria can affect the APR and
-                fees offered. This calculator does not review your credit or
-                determine eligibility.
-              </p>
-            </div>
           </div>
 
-          <div className="calculator-card">
-            <form className="calculator-form" onSubmit={handleLoanSubmit}>
-              <h3>Loan payment calculator</h3>
-              <div className="calculator-fields">
-                <label>
-                  Purchase price or loan amount (USD)
-                  <input
-                    type="number"
-                    min="0.01"
-                    max="100000000"
-                    step="0.01"
-                    value={loanAmount}
-                    onChange={(event) => updateLoanInput(setLoanAmount, event)}
-                    required
-                  />
-                </label>
-                <label>
-                  Down payment (if applicable)
-                  <input
-                    type="number"
-                    min="0"
-                    max="100000000"
-                    step="0.01"
-                    value={downPayment}
-                    onChange={(event) => updateLoanInput(setDownPayment, event)}
-                    required
-                  />
-                </label>
-                <label>
-                  Quoted APR (%)
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    value={loanApr}
-                    onChange={(event) => updateLoanInput(setLoanApr, event)}
-                    required
-                  />
-                </label>
-                <label>
-                  Loan term (months)
-                  <input
-                    type="number"
-                    min="1"
-                    max="600"
-                    step="1"
-                    value={loanTerm}
-                    onChange={(event) => updateLoanInput(setLoanTerm, event)}
-                    required
-                  />
-                </label>
-                <label className="calculator-fees">
-                  One-time fees added to the loan (optional)
-                  <input
-                    type="number"
-                    min="0"
-                    max="100000000"
-                    step="0.01"
-                    value={financedFees}
-                    onChange={(event) => updateLoanInput(setFinancedFees, event)}
-                  />
-                </label>
-              </div>
-              <button className="button button-dark calculator-submit" type="submit">
-                Calculate Payment <Calculator size={17} />
-              </button>
-              {loanError && <p className="calculator-error" role="alert">{loanError}</p>}
-              <p className="calculator-disclaimer">
-                Estimates only. Taxes, insurance, escrow, and fees not entered
-                here are excluded. Actual loan terms and costs vary by lender
-                and borrower; this is not an offer or approval.
-              </p>
-              {loanEstimate && (
-                <div className="calculator-results" aria-live="polite">
-                  <h4>Estimated loan summary</h4>
-                  <div className="calculator-monthly">
-                    <span>Estimated monthly payment</span>
-                    <strong>
-                      {new Intl.NumberFormat("en-US", {
-                        style: "currency",
-                        currency: "USD",
-                      }).format(loanEstimate.monthlyPayment)}
-                    </strong>
+          <div className="credit-insights-grid">
+            <article className="credit-factor-card">
+              <div className="credit-factor-chart-layout">
+                <div
+                  aria-label={`${creditFactor.name}, ${creditFactor.percentage}% of the illustrative factor mix`}
+                  className="credit-factor-donut"
+                  role="img"
+                  style={{ background: factorGradient }}
+                >
+                  <div className="credit-factor-donut-center">
+                    <strong style={{ color: creditFactor.color }}>{creditFactor.percentage}%</strong>
+                    <span>{creditFactor.name}</span>
                   </div>
-                  <dl>
-                    <div>
-                      <dt>Amount financed, including fees</dt>
-                      <dd>{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(loanEstimate.amountFinanced)}</dd>
-                    </div>
-                    <div>
-                      <dt>Estimated total interest</dt>
-                      <dd>{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(loanEstimate.totalInterest)}</dd>
-                    </div>
-                    <div>
-                      <dt>Total of estimated payments</dt>
-                      <dd>{new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(loanEstimate.totalPayments)}</dd>
-                    </div>
-                  </dl>
                 </div>
-              )}
-            </form>
+
+                <div className="credit-factor-legend">
+                  <div className="credit-factor-list" role="group" aria-label="Credit score factors">
+                    {creditFactors.map((factor, index) => (
+                      <button
+                        aria-pressed={activeCreditFactor === index}
+                        className={activeCreditFactor === index ? "credit-factor-option active" : "credit-factor-option"}
+                        key={factor.name}
+                        onClick={() => setActiveCreditFactor(index)}
+                        type="button"
+                      >
+                        <span className="factor-color-dot" style={{ backgroundColor: factor.color }} />
+                        <span>{factor.name}</span>
+                        <strong>{factor.percentage}%</strong>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="credit-factor-description" style={{ borderColor: creditFactor.color }}>
+                    {creditFactor.description}
+                  </p>
+                </div>
+              </div>
+              <p className="credit-factor-source">
+                Illustrative general FICO score factors. Scoring models and individual credit profiles vary.
+              </p>
+            </article>
+
+            <article className="utilization-card">
+              <span className="utilization-eyebrow">
+                <span aria-hidden="true" />
+                Check your utilization
+              </span>
+              <h3>How much of your available credit are you using?</h3>
+
+              <label className="utilization-slider">
+                <span>
+                  <span>Card balance</span>
+                  <strong>{formatDollars(cardBalance)}</strong>
+                </span>
+                <input
+                  aria-label="Card balance"
+                  max="30000"
+                  min="0"
+                  onChange={(event) => setCardBalance(Number(event.target.value))}
+                  step="100"
+                  type="range"
+                  value={cardBalance}
+                />
+              </label>
+
+              <label className="utilization-slider">
+                <span>
+                  <span>Credit limit</span>
+                  <strong>{formatDollars(creditLimit)}</strong>
+                </span>
+                <input
+                  aria-label="Credit limit"
+                  max="30000"
+                  min="500"
+                  onChange={(event) => setCreditLimit(Number(event.target.value))}
+                  step="100"
+                  type="range"
+                  value={creditLimit}
+                />
+              </label>
+
+              <div className={`utilization-reading ${utilizationStatus.className}`} aria-live="polite">
+                <strong>{utilizationPercentage}%</strong>
+                <span>{utilizationStatus.label}</span>
+              </div>
+              <div
+                aria-label={`Credit utilization: ${utilizationPercentage}%`}
+                className="utilization-meter"
+                role="img"
+              >
+                <div className="utilization-meter-track" />
+                <span
+                  className="utilization-meter-marker"
+                  style={{ left: `${Math.min(utilizationPercentage, 100)}%` }}
+                />
+              </div>
+              <div className="utilization-scale-labels" aria-hidden="true">
+                <span>0</span><span>10</span><span>30</span><span>50</span><span>100%</span>
+              </div>
+              <p className="utilization-explanation">
+                Lower utilization is generally preferable, but this example does not predict a credit-score change.
+              </p>
+            </article>
           </div>
         </div>
       </section>
@@ -509,32 +588,43 @@ function App() {
         </div>
       </section>
 
-      <section className="credit-services-section" id="credit-services">
-        <div className="container">
-          <div className="section-heading">
-            <span className="eyebrow">HOW WE CAN HELP</span>
-            <h2>Guidance for your credit journey.</h2>
-            <p>
-              Explore the types of credit-related support available through
-              Barbra's House of Credit.
-            </p>
-          </div>
+      <section
+        className="credit-services-section"
+        id="credit-services"
+        ref={creditServicesSectionRef}
+      >
+        <div className="credit-services-stage">
+          <div className="container">
+            <div className="section-heading">
+              <span className="eyebrow">HOW WE CAN HELP</span>
+              <h2>Guidance for your credit journey.</h2>
+              <p>
+                Explore the types of credit-related support available through
+                Barbra's House of Credit.
+              </p>
+            </div>
 
-          <div className="credit-services-grid">
-            {services.map((service, index) => {
-              const Icon = service.icon;
-              return (
-                <article className="credit-service-card" key={service.title}>
-                  <span className="service-number">0{index + 1}</span>
-                  <div className="service-icon"><Icon size={24} /></div>
-                  <h3>{service.title}</h3>
-                  <p>{service.description}</p>
-                  <a href="#contact">
-                    Ask About This Service <ArrowRight size={15} />
-                  </a>
-                </article>
-              );
-            })}
+            <div className="credit-services-viewport" ref={creditServicesViewportRef}>
+              <div className="credit-services-track" ref={creditServicesTrackRef}>
+                {services.map((service, index) => {
+                  const Icon = service.icon;
+                  return (
+                    <article
+                      className="credit-service-card"
+                      key={service.title}
+                    >
+                      <span className="service-number">0{index + 1}</span>
+                      <div className="service-icon"><Icon size={24} /></div>
+                      <h3>{service.title}</h3>
+                      <p>{service.description}</p>
+                      <a href="#contact">
+                        Ask About This Service <ArrowRight size={15} />
+                      </a>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -584,6 +674,44 @@ function App() {
               <strong>Clarity comes first.</strong>
               <span>Understand your options before making a decision.</span>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="financing-section" id="services">
+        <div className="container">
+          <div className="section-heading">
+            <span className="eyebrow">EXPLORE YOUR OPTIONS</span>
+            <h2>What are you working toward?</h2>
+            <p>
+              Start with the goal that matters to you. Learn more about the
+              guidance and options available.
+            </p>
+          </div>
+
+          <div className="financing-grid">
+            {financingServices.map((service, index) => {
+              const Icon = service.icon;
+              return (
+                <article className="financing-card" key={service.title}>
+                  <div className="financing-image">
+                    <img
+                      src={`https://images.unsplash.com/${service.image}?auto=format&fit=crop&w=850&q=85`}
+                      alt={service.title}
+                    />
+                    <span className="card-number">0{index + 1}</span>
+                  </div>
+                  <div className="financing-card-body">
+                    <div className="card-icon"><Icon size={22} /></div>
+                    <h3>{service.title}</h3>
+                    <p>{service.description}</p>
+                    <a href="#contact">
+                      Discuss Your Goals <ArrowRight size={16} />
+                    </a>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -657,122 +785,34 @@ function App() {
         </div>
       </section>
 
-      <section className="contact-section" id="contact">
-        <div className="container contact-grid">
-          <div className="contact-copy">
-            <span className="eyebrow light">LET'S START A CONVERSATION</span>
-            <h2>Your goals deserve a clear conversation.</h2>
+      <section className="home-contact-cta" id="contact">
+        <div className="container home-contact-cta-inner">
+          <div>
+            <span className="eyebrow light">READY TO TALK?</span>
+            <h2>Let's find a clear next step together.</h2>
             <p>
-              Tell us what you're looking for. Whether it's financing guidance
-              or credit support, we're here to help you understand possible
-              next steps.
+              Request a free consultation and suggest a time that works for you.
+              We'll contact you to confirm.
             </p>
-            <div className="contact-points">
-              <span><MessageCircle size={18} /> Personal inquiry</span>
-              <span><LockKeyhole size={18} /> Basic contact information only</span>
-            </div>
           </div>
-
-          <form
-            className="contact-form"
-            name="inquiry"
-            method="POST"
-            action="/thank-you.html"
-            data-netlify="true"
-            data-netlify-honeypot="bot-field"
-          >
-            <input type="hidden" name="form-name" value="inquiry" />
-            <div className="form-honeypot" aria-hidden="true">
-              <label>
-                Leave this field empty
-                <input name="bot-field" tabIndex="-1" autoComplete="off" />
-              </label>
-            </div>
-            <h3>How can we help you?</h3>
-            <label>
-              Full name
-              <input
-                name="name"
-                type="text"
-                autoComplete="name"
-                placeholder="Your full name"
-                required
-              />
-            </label>
-            <label>
-              Email address
-              <input
-                name="email"
-                type="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                required
-              />
-            </label>
-            <label>
-              Phone number (optional)
-              <input
-                name="phone"
-                type="tel"
-                autoComplete="tel"
-                placeholder="Your phone number"
-              />
-            </label>
-            <label>
-              What would you like help with?
-              <select name="goal" defaultValue="" required>
-                <option value="" disabled>Select a topic</option>
-                <option>Home financing</option>
-                <option>Auto financing</option>
-                <option>Business financing</option>
-                <option>Personal financing</option>
-                <option>Credit education and guidance</option>
-                <option>Credit report review</option>
-                <option>Credit repair services</option>
-                <option>Ongoing credit support</option>
-                <option>Something else</option>
-              </select>
-            </label>
-            <label>
-              Message (optional)
-              <textarea
-                name="message"
-                rows="3"
-                placeholder="Tell us briefly what you'd like help with."
-              />
-            </label>
-            <button className="button button-dark submit-button" type="submit">
-              Send Inquiry <ArrowRight size={18} />
-            </button>
-            <small>
-              Please don't submit your Social Security Number, passwords, or
-              sensitive financial information through this form.
-            </small>
-          </form>
+          <a className="button button-light" href="/contact#consultation">
+            Free Consultation <ArrowRight size={17} />
+          </a>
         </div>
       </section>
-
-      <footer className="site-footer">
-        <a className="brand footer-brand" href="#home">
-          <span className="brand-mark">B</span>
-          <span className="brand-name">
-            <strong>Barbra's</strong>
-            <small>HOUSE OF CREDIT</small>
-          </span>
-        </a>
-        <p>
-          Helping individuals understand their credit and explore financial options.
-        </p>
-        <div className="footer-links">
-          <a href="#home">Home</a>
-          <a href="#services">Services</a>
-          <a href="#about">About</a>
-          <a href="#contact">Contact</a>
-        </div>
-        <small>© {new Date().getFullYear()} Barbra's House of Credit. All rights reserved.</small>
-      </footer>
-    </main>
+      </main>
+      <SiteFooter />
+    </div>
   );
 }
 
-createRoot(document.getElementById("root")).render(<App />);
+const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
+const isCalculatorPage = currentPath === "/calculator";
+const isContactPage = currentPath === "/contact";
+createRoot(document.getElementById("root")).render(
+  isCalculatorPage
+    ? <LoanCalculatorPage />
+    : isContactPage
+      ? <ContactPage />
+      : <App />,
+);
